@@ -1,12 +1,19 @@
 from scapy.all import ARP, Ether, srp, IP, TCP, sr1
-import re, time, sys, threading
+import re, time, threading, json
+
+# Imports for troubleshooting below:
+
+# from scapy.all import conf
+# from scapy.arch.windows import *
+
+
 
 def scan_network(network):
   arp = ARP(pdst=network) # Create ARP Request by setting the ARP function's package destination parameter `pdst` to the `network` argument.
   ether = Ether(dst="ff:ff:ff:ff:ff:ff") # Creates ethernet broadcast frame with all 6 octets set to 255 (ff) as to broadcast across the entire network.
   packet = ether / arp # Scapy uses operator overloading here to stack protocol layers, this is not division. 
 
-  result = srp(packet, timeout = 3, verbose = True)[0] # Send packet & capture response. Scapy's srp() function is used for 2 layer packets, like ethernet here.
+  result = srp(packet, timeout = 3, verbose = False)[0] # Send packet & capture response. Scapy's srp() function is used for 2 layer packets, like ethernet here.
 
   devices = []
   for sent, recieved in result:
@@ -59,19 +66,25 @@ def display_opening_msg():
 
 
 def progress_indicator(stop_event, ip):
-  print(f"\nScanning {ip}", end = "")
-  while not stop_event.is_set():
+
+  print(f"\nScanning {ip} ", end = "")
+
+  while not stop_event.is_set(): # while scan_network() is running...
     for _ in range(3):
       if stop_event.is_set():
         break
-      print(".", end = "", flush = True)
-      time.sleep(0.75)
+      print(". ", end = "", flush = True) # Print an ellipses every half second.
+      time.sleep(0.5)
     if not stop_event.is_set():
-      print(f"\rScanning {ip}", end="", flush=True)
+      print("\b\b\b\b\b     \b\b\b\b\b\b", end="", flush=True) # Uses backspace character to erase ellipses and start over if still running.
+
 
 
 def main():
   display_opening_msg()
+
+  # print(conf.iface) # While uncommented, displays network interface being used by scapy.
+  # print(json.dumps(get_windows_if_list(), indent = 4)) displays all network interfaces (Windows).
 
   # Define regex for checking IPv4 CIDR notation.
   cidr_regex = r"^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\." \
@@ -85,33 +98,35 @@ def main():
   while (not valid_input): 
     try:
       user_input = input("Please enter IP to be scanned in IPv4 CIDR notation: ")
-    except KeyboardInterrupt: # Gracefully exit program on Ctrl+C
+    except KeyboardInterrupt: # Gracefully exit program on Ctrl+C.
+      print("Exiting...")
       exit()
-    if (re.match(cidr_regex, user_input)):
+    if (re.match(cidr_regex, user_input)): # Checks to see if the user's input matches the CIDR regular expression.
       valid_input = True
     else:
-      print("Invalid Format! e.g >> (192.168.0.1/24)\n")
+      print("Invalid Format! e.g >> (192.168.0.0/24)\n") # "Hey buddy, that's not IPv4 CIDR, here's an example"
 
-  # Scan network and output IP and MAC addrs.
+  network = user_input # Sets network variable to user_input for improved readability.
+
+  stop_event = threading.Event()  # Event to signal the progress_indicator thread to stop.
+  progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, network)) # Defines progress_indicator as a thread.
   
-  stop_event = threading.Event()  # Event to signal the thread to stop
-  progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, user_input))
-  network = user_input
   try:
-    progress_thread.start()
-    devices = scan_network(network)
+    progress_thread.start() # Starts progress_indicator thread
+    devices = scan_network(network) # Begins scanning network.
   except KeyboardInterrupt:
+    print("Exiting...")
     exit()
   finally:
-    stop_event.set()
-    progress_thread.join()  # Wait for the thread to finish
+    stop_event.set() # Stop progress_indicator thread!
+    progress_thread.join()  # Wait for the thread to finish.
     print(" Done!")
 
   if not devices:
     print("No devices found on the network.")
   else:
     for device in devices:
-        print(f"IP: {device['IP']}, MAC: {device['MAC']}")
+        print(f"IP: {device['IP']}, MAC: {device['MAC']}") 
 
 
 if __name__ == "__main__":

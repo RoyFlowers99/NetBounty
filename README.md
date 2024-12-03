@@ -24,7 +24,7 @@ NetBounty is a lightweight, portable tool designed to assist in network scanning
 
 ### Npcap
 
-   Npcap is required for network packet sniffing and Layer 2 operations.
+   Npcap is required for network packet sniffing and Layer 2 operations on Windows.
    You can download and install Npcap by running the `npcap_inst.py` file in the `/src/` directory or from [npcap.com](https://npcap.com/dist/).
         
    During Installation:
