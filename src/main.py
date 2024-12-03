@@ -1,19 +1,21 @@
 from scapy.all import ARP, Ether, srp, IP, TCP, sr1
-import re
+import re, time, sys, threading
 
 def scan_network(network):
   arp = ARP(pdst=network) # Create ARP Request by setting the ARP function's package destination parameter `pdst` to the `network` argument.
   ether = Ether(dst="ff:ff:ff:ff:ff:ff") # Creates ethernet broadcast frame with all 6 octets set to 255 (ff) as to broadcast across the entire network.
   packet = ether / arp # Scapy uses operator overloading here to stack protocol layers, this is not division. 
 
-  result = srp(packet, timeout = 2, verbose = False)[0] # Send packet & capture response. Scapy's srp() function is used for 2 layer packets, like ethernet here.
+  result = srp(packet, timeout = 3, verbose = True)[0] # Send packet & capture response. Scapy's srp() function is used for 2 layer packets, like ethernet here.
 
   devices = []
   for sent, recieved in result:
     devices.append({"IP": recieved.psrc, "MAC": recieved.hwsrc}) # The ARP response packet contains the `.psrc` (protocol source address) and 
                                                                  # `.hwsrc` (hardware source address) fields that we are appending to the devices array.
-  
+
   return devices # Returns discovered devices w/ associated IP and MAC addrs.
+
+
 
 def scan_ports(ip, ports):
   open_ports = []
@@ -29,6 +31,8 @@ def scan_ports(ip, ports):
       open_ports.append(port)
   
   return open_ports # Returns open ports.
+
+
 
 def display_opening_msg():
     print( # What good is an app if it doesnt look cool when it's fired up?
@@ -51,6 +55,20 @@ def display_opening_msg():
  
   """
   )
+
+
+
+def progress_indicator(stop_event, ip):
+  print(f"\nScanning {ip}", end = "")
+  while not stop_event.is_set():
+    for _ in range(3):
+      if stop_event.is_set():
+        break
+      print(".", end = "", flush = True)
+      time.sleep(0.75)
+    if not stop_event.is_set():
+      print(f"\rScanning {ip}", end="", flush=True)
+
 
 def main():
   display_opening_msg()
@@ -75,11 +93,25 @@ def main():
       print("Invalid Format! e.g >> (192.168.0.1/24)\n")
 
   # Scan network and output IP and MAC addrs.
-  print(f"\nScanning {user_input}...")
+  
+  stop_event = threading.Event()  # Event to signal the thread to stop
+  progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, user_input))
   network = user_input
-  devices = scan_network(network)
-  for device in devices:
-    print(f"IP: {device['IP']}, MAC: {device["MAC"]}")
+  try:
+    progress_thread.start()
+    devices = scan_network(network)
+  except KeyboardInterrupt:
+    exit()
+  finally:
+    stop_event.set()
+    progress_thread.join()  # Wait for the thread to finish
+    print(" Done!")
+
+  if not devices:
+    print("No devices found on the network.")
+  else:
+    for device in devices:
+        print(f"IP: {device['IP']}, MAC: {device['MAC']}")
 
 
 if __name__ == "__main__":
