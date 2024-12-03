@@ -1,88 +1,86 @@
 # NetBounty
-**A Python-Based Network Reconnaissance and Vulnerability Scanner**
+
+NetBounty is a lightweight, portable tool designed to assist in network scanning, service identification, and vulnerability enumeration. It leverages APIs like the CVE Services API for up-to-date vulnerability data while minimizing the need for local storage.
 
 ---
 
-## Overview
-**NetBounty** is a command-line tool designed for network reconnaissance and vulnerability scanning. It automates key stages of penetration testing by identifying active devices, services, open ports, and potential vulnerabilities in a given network. The tool replicates service identification capabilities similar to Nmap, while adding lightweight vulnerability enumeration by integrating real-time data from CVE and NIST APIs. This project highlights Python's versatility in cybersecurity applications and delivers a functional, user-friendly solution.
+## Features
+- **Network Scanning**: Identify live hosts and open ports.
+- **Service Identification**: Determine running services on open ports.
+- **Vulnerability Enumeration**: Fetch vulnerabilities using the CVE Services API.
 
 ---
 
-## Objectives
-The primary goals of NetBounty are:
-- To identify active devices, open ports, and running services within a network.
-- To retrieve service banner information (e.g., HTTP, FTP, SSH versions).
-- To cross-reference identified services and versions against public vulnerability databases for basic risk assessment.
-- To generate comprehensive, easy-to-read reports in JSON and HTML formats.
+## Prerequisites
+
+### Python
+- Python 3.x is required. Install it from [python.org](https://www.python.org).
+
+### Dependencies
+
+- Install project dependencies:
+
+      pip install -r requirements.txt
+
+### Npcap
+
+   Npcap is required for network packet sniffing and Layer 2 operations.
+   You can download and install Npcap by running the `npcap_inst.py` file in the `/src/` directory or from [npcap.com](https://npcap.com/dist/).
+        
+   During Installation:
+   
+   - Ensure "Install Npcap in WinPcap API-compatible mode" is selected.
 
 ---
 
-## Key Features
-1. **Device and Port Discovery**:
-   - Perform network scans to identify active devices and their open ports.
-   - Use ARP and ICMP requests for device discovery and `socket` for port scanning.
+## Installation
 
-2. **Service Banner Grabbing**:
-   - Retrieve service information (e.g., version details of HTTP, FTP, or SSH services) from open ports using `socket` or custom-crafted packets with `scapy`.
+ - Clone the repository:
 
-3. **Basic Vulnerability Identification**:
-   - Query publicly available APIs (CVE and NIST) to identify vulnerabilities associated with detected services and versions.
+   `git clone https://github.com/RoyFlowers99/NetBounty.git`
 
-4. **Reporting System**:
-   - Generate tabular reports in HTML and JSON formats.
-   - Provide an organized summary of scan results, including identified vulnerabilities, for easy review in a web browser.
+   `cd NetBounty`
 
----
+- Install Dependencies:
 
-## Technologies
-NetBounty leverages the following Python libraries and tools:
-- **Libraries**:
-  - `scapy`: For crafting and analyzing network packets.
-  - `socket`: For network communication and port scanning.
-  - `os` and `subprocess`: For executing system-level commands.
-  - `argparse`: For parsing command-line arguments.
-  - `json` and `html`: For report generation.
-- **External Tools**:
-  - CVE and NIST APIs for vulnerability enumeration and risk assessment.
+    - Create virtual environment
 
----
+            python -m venv venv
 
-## Target Audience
-NetBounty is designed for:
-- Ethical hackers
-- Penetration testers
-- Network administrators
+    - Activate Virtual Environment 
 
-### Use Cases
-- Enumerating a local network’s devices, services, and vulnerabilities.
-- Testing lab environments for vulnerabilities.
-- Automating reconnaissance tasks as part of an ethical hacking workflow.
+            Windows:
+            venv\Scripts\activate
+
+
+            macOS/Linux: 
+            source venv/bin/activate
+
+    - Install dependencies with pip
+
+            pip install -r requirements.txt
 
 ---
 
-## Challenges and Solutions
-1. **Irrelevant or Excessive Data**:
-   - Results may include unrelated or excessive data, reducing readability.
-   - **Solution**: Implement filtering logic to narrow results by severity or specific software versions.
+## Usage
 
-2. **Portability**:
-   - Ensuring the tool operates seamlessly across Linux, Windows, and macOS.
-   - **Solution**: Use cross-platform libraries and test on multiple platforms (e.g., using VMs).
-
-3. **API Rate Limits**:
-   - Public APIs often impose restrictions on the number of requests per minute or day.
-   - **Solution**: Implement caching for frequent queries and retry logic with exponential backoff.
+   `python src/main.py`
 
 ---
 
-## Reporting and Output
-NetBounty generates reports in the following formats:
-- **HTML**: A browser-friendly table summarizing scan results and vulnerabilities.
-- **JSON**: A structured, machine-readable format for integration with other tools or workflows.
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+This project relies on Npcap for network functionality. Npcap is not included with this software and must be installed separately. 
+Please review Npcap's licensing terms at https://nmap.org/npsl/.
 
 ---
 
-## How to Use
-1. Install the required dependencies in a Python virtual environment:
-   ```bash
-   pip install -r requirements.txt
+## Acknowledgments
+
+Special thanks to:
+
+    Scapy for packet manipulation.
+    CVE Services API for vulnerability data.
+    Npcap for enabling low-level network access.

@@ -65,7 +65,10 @@ def main():
   # Input validation.
   valid_input = False
   while (not valid_input): 
-    user_input = input("Please enter IP to be scanned in IPv4 CIDR notation: ")
+    try:
+      user_input = input("Please enter IP to be scanned in IPv4 CIDR notation: ")
+    except KeyboardInterrupt: # Gracefully exit program on Ctrl+C
+      exit()
     if (re.match(cidr_regex, user_input)):
       valid_input = True
     else:
