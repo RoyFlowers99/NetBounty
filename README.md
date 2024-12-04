@@ -94,4 +94,4 @@ Special thanks to:
 
     Scapy for packet manipulation.
     CVE Services API for vulnerability data.
-    Npcap for enabling low-level network access.
+    Npcap / Nmap for enabling low-level network access.

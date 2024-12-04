@@ -1,5 +1,8 @@
 from scapy.all import ARP, Ether, srp, IP, TCP, sr1
+import nmap
+from tabulate import tabulate
 import re, time, threading, json
+import xml.etree.ElementTree as ET
 
 # Imports for troubleshooting below:
 # from scapy.all import conf
@@ -41,6 +44,50 @@ def scan_ports(ips, ports):
 
 
 
+def identify_services_with_nmap(alive_ports):
+    nm = nmap.PortScanner() # Creates Nmap PortScanner object
+    results = {}
+    
+    for target_ip, ports in alive_ports.items():
+        ports_str = ','.join(map(str, ports)) # Join ports list into a comma-separated string again.
+
+        # New progress indicator thread
+        stop_event = threading.Event()
+        progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, f"Identifying services at {target_ip} running on port(s): {ports_str}")) 
+        progress_thread.start()
+        
+        # Perform the service scan with -Pn. Since we're only scanning alive hosts we can comfortably skip the host discovery phase.
+        nm.scan(target_ip, ports_str, arguments='-sV -Pn')
+        
+        # stop progress indicator thread
+        stop_event.set()
+        progress_thread.join()
+        print(" Done!")
+
+        # Process and display results using raw XML parsing
+        raw_xml = nm.get_nmap_last_output()  # Get the raw XML output
+        root = ET.fromstring(raw_xml)  # Parse the XML
+
+        for host in root.findall("host"):
+            for port in host.find("ports").findall("port"):
+                port_id = port.attrib['portid']
+                service = port.find("service")
+                name = service.attrib.get('name', 'Unknown')
+                product = service.attrib.get('product', 'Unknown')
+                version = service.attrib.get('version', 'Unknown')
+                extra_info = service.attrib.get('extrainfo', '')
+
+                results.setdefault(target_ip, []).append({
+                  "port": int(port_id),
+                  "service": name,
+                  "product": product,
+                  "version": version,
+                  "extra_info": extra_info
+                })
+    return results
+
+
+
 def display_opening_msg():
     print( # What good is an app if it doesnt look cool when it's fired up?
   r"""
@@ -49,7 +96,7 @@ def display_opening_msg():
  | .` / -_)  _| _ \/ _ \ || | ' \  _| || |
  |_|\_\___|\__|___/\___/\_,_|_||_\__|\_, |
                                      |__/ 
- Network Reconnaissance and Vulnerability Scanner
+ Simple Network Reconnaissance and Vulnerability Scanner
  by Caleb Keene
 
  ---
@@ -65,11 +112,11 @@ def display_opening_msg():
 
 
 
-def progress_indicator(stop_event, ip):
+def progress_indicator(stop_event, what_is_happing): # Scanning network, ports, identifying services, etc.
 
-  print(f"\nScanning {ip} ", end = "")
+  print(f"\n{what_is_happing} ", end = "")
 
-  while not stop_event.is_set(): # while scan is running...
+  while not stop_event.is_set(): # while scan is still running...
     for _ in range(3):
       if stop_event.is_set():
         break
@@ -104,8 +151,9 @@ def take_ip_range_input():
   return user_input
 
 
+
 def take_port_range_input():
-    # Define regex for numbers between 0 and 65535 separated by commas.
+    # Define regex for numbers between 0 and 99999 separated by commas.
     port_regex = r"^(?:0|[1-9]\d{0,4})(?:,(?:0|[1-9]\d{0,4}))*$"
     
     valid_input = False
@@ -115,11 +163,11 @@ def take_port_range_input():
       except KeyboardInterrupt: # Gracefully exit program on Ctrl+C.
         print("Exiting...")
         exit()
-      if not re.fullmatch(port_regex, user_input): # Checks to see if the user's intput matches the port number regular expression.
+      if not re.fullmatch(port_regex, user_input): # Checks to see if the user's input matches the port number regular expression.
         print("Invalid Format! e.g. >> (22,80,443,3306)\n")
         continue
       else:
-        ports = list(map(int, user_input.split(','))) # Convert to integers and check range
+        ports = list(map(int, user_input.split(','))) # Converts to integers and checks range.
         if all(0 <= port <= 65535 for port in ports): # Makes sure ports specified are in bounds.
             return ports
         print("Err: Port numbers must be between 0-65535.\n") 
@@ -128,7 +176,6 @@ def take_port_range_input():
 
 
 def main():
-  display_opening_msg()
 
   # print(conf.iface) # While uncommented, displays network interface being used by scapy.
   # print(json.dumps(get_windows_if_list(), indent = 4)) displays all network interfaces (whilst ran on Windows).
@@ -138,11 +185,14 @@ def main():
   ips = []
 
   stop_event = threading.Event()  # Event to signal the progress_indicator thread to stop.
-  progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, network)) # Defines progress_indicator as a thread.
+  progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, f"Scanning network {network}")) # Defines progress_indicator as a thread with network parameter.
   
   try:
     progress_thread.start() # Starts progress_indicator thread.
     devices = scan_network(network) # Begins scanning network.
+    ips = [device['IP'] for device in devices]
+    table_data = [(device[('IP')], device[('MAC')]) for device in devices]
+    headers = ["IP Address", "MAC Address"]
   except KeyboardInterrupt:
     print("Exiting...")
     exit()
@@ -152,15 +202,29 @@ def main():
     print(" Done!")
 
   if not devices:
-    print("\nNo devices found on the network.")
+    print("\nNo devices found on the network.\n")
+    main() # Start over from the beginning.
   else:
+    # Prints results nicely.
     print("\nDevices discovered:")
-    for device in devices:
-        ips.append(device['IP'])
-        print(f"IP: {device['IP']}, MAC: {device['MAC']}") 
-    print(f"\nDevices with open ports:\n{json.dumps(scan_ports(ips, ports), indent = 2)}")
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+    # Starting progress indicator thread again for port scan.
+    stop_event = threading.Event()
+    progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, f"Scanning ports {ports}"))
+    progress_thread.start()
+
+    alive_ports = scan_ports(ips, ports)
+
+    stop_event.set()
+    progress_thread.join()
+    print(" Done!")
+
+    print(f"\nDevices with open ports:\n{tabulate(alive_ports, headers = "keys")}\n") # Display alive ports.
+    print(json.dumps(identify_services_with_nmap(alive_ports), indent = 3)) # Display services information
 
 
 
 if __name__ == "__main__":
+  display_opening_msg()
   main()
