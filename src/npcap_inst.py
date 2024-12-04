@@ -1,4 +1,5 @@
-# Run this script if npcap is not installed as scapy relies on it to work properly.
+# Run this script if you are a Windows user and npcap is not installed. 
+# The scapy module relies on it to work properly.
 
 import os, urllib.request
 

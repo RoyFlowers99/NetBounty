@@ -22,10 +22,10 @@ NetBounty is a lightweight, portable tool designed to assist in network scanning
 
       pip install -r requirements.txt
 
-### Npcap
+### Npcap (Windows)
 
    Npcap is required for network packet sniffing and Layer 2 operations on Windows.
-   You can download and install Npcap by running the `npcap_inst.py` file in the `/src/` directory or from [npcap.com](https://npcap.com/dist/).
+   You can download Npcap by running the `npcap_inst.py` file in the `/src/` directory or from [npcap.com](https://npcap.com/dist/).
         
    During Installation:
    
@@ -50,11 +50,11 @@ NetBounty is a lightweight, portable tool designed to assist in network scanning
     - Activate Virtual Environment 
 
             Windows:
-            venv\Scripts\activate
+            .\venv\Scripts\activate
 
 
             macOS/Linux: 
-            source venv/bin/activate
+            source ./venv/bin/activate
 
     - Install dependencies with pip
 
@@ -64,7 +64,18 @@ NetBounty is a lightweight, portable tool designed to assist in network scanning
 
 ## Usage
 
-   `python src/main.py`
+   - Activate Virtual Environment 
+
+                Windows:
+                venv\Scripts\activate
+
+
+                macOS/Linux: 
+                source venv/bin/activate
+
+        `python ./src/main.py`
+
+   macOS and Linux users may have to run as sudo.
 
 ---
 
