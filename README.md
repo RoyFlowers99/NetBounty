@@ -18,9 +18,7 @@ NetBounty is a lightweight, portable tool designed to streamline and assist in n
 
 ### Dependencies
 
-- Install project dependencies:
-
-      pip install -r requirements.txt
+- See installation steps below or requirements.txt
 
 ### Npcap (Windows)
 
@@ -67,11 +65,11 @@ NetBounty is a lightweight, portable tool designed to streamline and assist in n
    - Activate Virtual Environment 
 
                 Windows:
-                venv\Scripts\activate
+                .\venv\Scripts\activate
 
 
                 macOS/Linux: 
-                source venv/bin/activate
+                source ./venv/bin/activate
 
         `python ./src/main.py`
 
