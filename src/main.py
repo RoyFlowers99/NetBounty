@@ -1,15 +1,18 @@
 from scapy.all import ARP, Ether, srp, IP, TCP, sr1
 import nmap
 from tabulate import tabulate
-import re, time, threading, json
+import re, time, threading, os, webbrowser
 import xml.etree.ElementTree as ET
 
 # Imports for troubleshooting below:
+# import json
 # from scapy.all import conf
 # from scapy.arch.windows import *
 
 
-
+"""
+start networking functions
+"""
 def scan_network(network):
   arp = ARP(pdst=network) # Create ARP Request by setting the ARP function's package destination parameter `pdst` to the `network` argument.
   ether = Ether(dst="ff:ff:ff:ff:ff:ff") # Creates ethernet broadcast frame with all 6 octets set to 255 (ff) as to broadcast across the entire network.
@@ -43,6 +46,13 @@ def scan_ports(ips, ports):
   return open_ports # Returns IP addrs with associated open ports.
 
 
+"""
+  I would have liked to perform all network scanning using scapy; but in the interest of time I had to
+  resort to using nmap for service identification. There was a lot more happening under the hood than what
+  I anticipated. I have left in the network and port scanning functions as 'proofs of concept,' so to speak.
+  Regardless, I think that using nmap here is acceptable as using scapy is really just reinventing the wheel.
+  Nmap does a fantastic job, and this little py app is just to show off some basic programming skills.
+"""
 
 def identify_services_with_nmap(alive_ports):
     nm = nmap.PortScanner() # Creates Nmap PortScanner object
@@ -56,7 +66,7 @@ def identify_services_with_nmap(alive_ports):
         progress_thread = threading.Thread(target=progress_indicator, args=(stop_event, f"Identifying services at {target_ip} running on port(s): {ports_str}")) 
         progress_thread.start()
         
-        # Perform the service scan with -Pn. Since we're only scanning alive hosts we can comfortably skip the host discovery phase.
+        # Perform the service scan with -sV. Since we're only scanning alive hosts we can comfortably skip the host discovery phase wiht the -Pn flag.
         nm.scan(target_ip, ports_str, arguments='-sV -Pn')
         
         # stop progress indicator thread
@@ -64,7 +74,7 @@ def identify_services_with_nmap(alive_ports):
         progress_thread.join()
         print(" Done!")
 
-        # Process and display results using raw XML parsing
+        # Process and display results using raw XML parsing to grab additional details
         raw_xml = nm.get_nmap_last_output()  # Get the raw XML output
         root = ET.fromstring(raw_xml)  # Parse the XML
 
@@ -85,9 +95,15 @@ def identify_services_with_nmap(alive_ports):
                   "extra_info": extra_info
                 })
     return results
+"""
+end networking functions
+"""
 
+###
 
-
+"""
+start display functions
+"""
 def display_opening_msg():
     print( # What good is an app if it doesnt look cool when it's fired up?
   r"""
@@ -124,9 +140,15 @@ def progress_indicator(stop_event, what_is_happing): # Scanning network, ports, 
       time.sleep(0.5)
     if not stop_event.is_set():
       print("\b\b\b\b\b     \b\b\b\b\b\b", end="", flush=True) # Uses backspace character to erase ellipses and start over if still running.
+"""
+end display functions
+"""
 
+###
 
-
+"""
+start input validation functions
+"""
 def take_ip_range_input():
   # Define regex for checking IPv4 CIDR notation.
   cidr_regex = r"^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\." \
@@ -171,10 +193,123 @@ def take_port_range_input():
         if all(0 <= port <= 65535 for port in ports): # Makes sure ports specified are in bounds.
             return ports
         print("Err: Port numbers must be between 0-65535.\n") 
-      
+"""
+end input validation functions
+"""
 
+###
 
+"""
+start html report generation
+"""
+def generate_html_report(service_data, output_file="report.html"):
+    #Generates an HTML report displaying service information with links to cve.mitre.org with a relevant query.
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>NetBounty Report</title>
+        <style>
+            body {
+                height: 1vh;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 16px;
+                text-align: left;
+            }
+            th, td {
+                padding: 12px;
+                border: 1px solid #ddd;
+            }
+            th {
+                background-color: #f4f4f4;
+            }
+            a {
+                color: #007bff;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>NetBounty<h1>
+        <h2>Identified Services Information</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Port</th>
+                    <th>Service</th>
+                    <th>Product</th>
+                    <th>Version</th>
+                    <th>cve.mitre.org</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
 
+    for ip, services in service_data.items():
+        for service in services:
+            port = service.get("port", "Unknown")
+            service_name = service.get("service", "Unknown")
+            product = service.get("product", "Unknown")
+            version = service.get("version", "Unknown")
+            
+            # Generate MITRE search link
+            if product != "Unknown" and version != "Unknown":
+                cve_link = f"https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword={product}+{version}"
+            elif product != "Unknown":
+                cve_link = f"https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword={product}"
+            elif service_name != "Unknown":
+                cve_link = f"https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword={service_name}"
+            else:
+                cve_link = "about:blank"
+
+            html_content += f"""
+            <tr>
+                <td>{ip}</td>
+                <td>{port}</td>
+                <td>{service_name}</td>
+                <td>{product}</td>
+                <td>{version}</td>
+                <td><a href="{cve_link}" target="_blank">Search CVEs</a></td>
+            </tr>
+            """
+
+    html_content += """
+            </tbody>
+        </table>
+    </body>
+    </html>
+    """
+
+    # Write HTML content to a file
+    with open(output_file, "w") as file:
+        file.write(html_content)
+
+    print(f"\nReport generated: {os.path.abspath(output_file)}")
+    
+    # Open the HTML file in the web browser
+    webbrowser.open(f"file://{os.path.abspath(output_file)}")
+
+    print()
+    main()
+"""
+end html report generation
+"""
+
+###
+
+"""
+start main
+"""
 def main():
 
   # print(conf.iface) # While uncommented, displays network interface being used by scapy.
@@ -221,8 +356,11 @@ def main():
     print(" Done!")
 
     print(f"\nDevices with open ports:\n{tabulate(alive_ports, headers = "keys")}\n") # Display alive ports.
-    print(json.dumps(identify_services_with_nmap(alive_ports), indent = 3)) # Display services information
-
+    services = identify_services_with_nmap(alive_ports)
+    generate_html_report(services)
+"""
+end main
+"""
 
 
 if __name__ == "__main__":

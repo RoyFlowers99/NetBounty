@@ -1,13 +1,13 @@
 # NetBounty
 
-NetBounty is a lightweight, portable tool designed to assist in network scanning, service identification, and vulnerability enumeration. It leverages APIs like the CVE Services API for up-to-date vulnerability data while minimizing the need for local storage.
+NetBounty is a lightweight, portable tool designed to streamline and assist in network scanning, service identification, and vulnerability enumeration.
 
 ---
 
 ## Features
 - **Network Scanning**: Identify live hosts and open ports.
 - **Service Identification**: Determine running services on open ports.
-- **Vulnerability Enumeration**: Fetch vulnerabilities using the CVE Services API.
+- **Streamlined Vulnerability Enumeration**: Provide links to vulnerabilities on cve.mitre.org.
 
 ---
 
@@ -75,7 +75,28 @@ NetBounty is a lightweight, portable tool designed to assist in network scanning
 
         `python ./src/main.py`
 
-   macOS and Linux users may have to run as sudo.
+        macOS and Linux users may have to run as sudo.
+
+   - Follow the Prompts:
+
+        - Enter an IP range to scan (in CIDR notation, e.g., 192.168.1.0/24).
+
+        - Provide a list of ports to scan (comma-separated, e.g., 22,80,443).
+
+   - View Results:
+
+        A simple HTML report (report.html) will be created in the script's directory.
+
+        The report includes:
+
+                IP addresses
+                ports
+                service names 
+                product names
+                semantic versions
+                clickable CVE search links
+
+        The report automatically opens in the default web browser.
 
 ---
 
@@ -85,13 +106,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 This project relies on Npcap for network functionality. Npcap is not included with this software and must be installed separately. 
 Please review Npcap's licensing terms at https://nmap.org/npsl/.
-
----
-
-## Acknowledgments
-
-Special thanks to:
-
-    Scapy for packet manipulation.
-    CVE Services API for vulnerability data.
-    Npcap / Nmap for enabling low-level network access.
